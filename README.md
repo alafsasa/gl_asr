@@ -1,4 +1,4 @@
-This is a GL_ASR(Automatic Speech Recognition) project.
+## GL_ASR(Automatic Speech Recognition) Model.
 
 ## Build & Run
 
