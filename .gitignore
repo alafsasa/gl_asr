@@ -1,0 +1,23 @@
+# Build output
+build/
+cmake-build-*/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+compile_commands.json
+
+# Runtime artifacts
+output/
+*.o
+*.a
+*.so
+*.dylib
+*.exe
+
+# OS
+.DS_Store
+
+# Local-only planning document (do not commit/publish)
+PROJECT_PLAN.md
