@@ -6,6 +6,7 @@
 
 #include "gl_asr/audio/audio_source.hpp"
 #include "gl_asr/cli/options.hpp"
+#include "gl_asr/features/feature_extractor.hpp"
 #include "gl_asr/preprocess/preprocessor.hpp"
 #include "gl_asr/version.hpp"
 
@@ -59,6 +60,8 @@ int main(int argc, char** argv) {
         std::cout << "output: " << options.outputDir << "\n";
     }
 
+    std::vector<float> samples = source.samples();
+
     if (!options.disablePreprocess) {
         gl_asr::PreprocessConfig config;
         if (options.targetDbfs.has_value()) {
@@ -67,7 +70,6 @@ int main(int argc, char** argv) {
         gl_asr::Preprocessor preprocessor(config);
         gl_asr::PreprocessStats stats;
 
-        std::vector<float> samples = source.samples();
         if (!preprocessor.process(samples, clip.sampleRate, &stats, error)) {
             std::cerr << "error: preprocessing failed: " << error << "\n";
             return 1;
@@ -82,6 +84,39 @@ int main(int argc, char** argv) {
         std::cout << "Preprocessing disabled.\n";
     }
 
-    std::cout << "GL_ASR " << GL_ASR_VERSION << ": pipeline stops after preprocessing.\n";
+    if (!options.disableFeatures) {
+        gl_asr::MelConfig melConfig;
+        if (options.nMels.has_value()) {
+            melConfig.nMels = *options.nMels;
+        }
+        const gl_asr::FeatureExtractor extractor(melConfig);
+        gl_asr::FeatureMatrix features;
+
+        if (!extractor.extract(samples, clip.sampleRate, features, error)) {
+            std::cerr << "error: feature extraction failed: " << error << "\n";
+            return 1;
+        }
+
+        std::cout << "Features: " << features.rows << " frames x " << features.cols
+                  << " mel bins\n";
+
+        const std::filesystem::path spectrogramPath =
+            std::filesystem::path(options.outputDir) / "spectrogram.csv";
+        if (!gl_asr::FeatureExtractor::dumpCsv(features, spectrogramPath.string(), error)) {
+            std::cerr << "error: " << error << "\n";
+            return 1;
+        }
+        std::cout << "Wrote " << spectrogramPath.string() << "\n";
+
+        if (options.verbose) {
+            const gl_asr::DerivedParams params = extractor.derivedParams(clip.sampleRate);
+            std::cout << "window: " << params.windowSamples << " samples, hop: "
+                      << params.hopSamples << " samples, fft: " << params.fftSize << "\n";
+        }
+    } else {
+        std::cout << "Feature extraction disabled.\n";
+    }
+
+    std::cout << "GL_ASR " << GL_ASR_VERSION << ": pipeline stops after feature extraction.\n";
     return 0;
 }

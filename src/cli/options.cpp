@@ -23,6 +23,21 @@ bool parseDouble(const std::string& text, double& value) {
     }
 }
 
+bool parseInt(const std::string& text, int& value) {
+    try {
+        std::size_t consumed = 0;
+        const int parsed = std::stoi(text, &consumed);
+        if (consumed != text.size()) {
+            return false;
+        }
+        value = parsed;
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
+
 }  // namespace
 
 bool parseOptions(const std::vector<std::string>& args, Options& options, std::string& error) {
@@ -45,6 +60,32 @@ bool parseOptions(const std::vector<std::string>& args, Options& options, std::s
         }
         if (arg == "--no-preprocess") {
             options.disablePreprocess = true;
+            continue;
+        }
+        if (arg == "--no-features") {
+            options.disableFeatures = true;
+            continue;
+        }
+        if (arg == "--n-mels") {
+            if (i + 1 >= args.size()) {
+                error = "missing value for " + arg;
+                return false;
+            }
+            int value = 0;
+            if (!parseInt(args[++i], value)) {
+                error = "invalid value for --n-mels: " + args[i];
+                return false;
+            }
+            options.nMels = value;
+            continue;
+        }
+        if (arg.rfind("--n-mels=", 0) == 0) {
+            int value = 0;
+            if (!parseInt(arg.substr(9), value)) {
+                error = "invalid value for --n-mels: " + arg.substr(9);
+                return false;
+            }
+            options.nMels = value;
             continue;
         }
         if (arg == "--target-dbfs") {
@@ -111,6 +152,8 @@ std::string usageText() {
            "  -o, --out <dir>        Output directory for generated artifacts (default: output)\n"
            "      --no-preprocess    Skip denoising, filtering, and normalization\n"
            "      --target-dbfs <db> RMS normalization target in dBFS (default: -20)\n"
+           "      --no-features      Skip log-mel spectrogram extraction\n"
+           "      --n-mels <n>       Number of mel filter bins (default: 80)\n"
            "  -v, --verbose          Enable verbose logging\n"
            "  -h, --help             Show this help message\n"
            "  -V, --version          Show version information\n";

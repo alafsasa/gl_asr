@@ -22,3 +22,8 @@ output/
 # Local-only planning document (do not commit/publish)
 PROJECT_PLAN.md
 docs/ARCHITECTURE.md
+
+#hide visualize spectrogram
+visualize_spectrogram.py
+spectrogram_visualized.png
+spectrogram_visualized_magma.png

@@ -12,3 +12,8 @@ add_executable(gl_asr_preprocess_tests test_preprocessor.cpp)
 target_link_libraries(gl_asr_preprocess_tests PRIVATE gl_asr_core)
 
 add_test(NAME preprocessor COMMAND gl_asr_preprocess_tests)
+
+add_executable(gl_asr_features_tests test_feature_extractor.cpp)
+target_link_libraries(gl_asr_features_tests PRIVATE gl_asr_core)
+
+add_test(NAME feature_extractor COMMAND gl_asr_features_tests)

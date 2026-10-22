@@ -16,6 +16,10 @@ struct Options {
     // Preprocessing controls.
     bool disablePreprocess = false;
     std::optional<double> targetDbfs;  // RMS normalization target when provided
+
+    // Feature extraction controls.
+    bool disableFeatures = false;
+    std::optional<int> nMels;  // number of mel filter bins when provided
 };
 
 // Parses command-line arguments. Returns true on success; on failure,

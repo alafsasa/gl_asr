@@ -12,14 +12,16 @@ option(GL_ASR_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(SNDFILE REQUIRED IMPORTED_TARGET sndfile)
+pkg_check_modules(FFTWF REQUIRED IMPORTED_TARGET fftw3f)
 
 add_library(gl_asr_core
     src/audio/audio_source.cpp
     src/cli/options.cpp
+    src/features/feature_extractor.cpp
     src/preprocess/preprocessor.cpp
 )
 target_include_directories(gl_asr_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(gl_asr_core PUBLIC PkgConfig::SNDFILE)
+target_link_libraries(gl_asr_core PUBLIC PkgConfig::SNDFILE PkgConfig::FFTWF)
 
 target_compile_options(gl_asr_core PRIVATE
     $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Wall -Wextra -Wpedantic -Wconversion -Wshadow>
