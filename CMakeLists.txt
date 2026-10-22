@@ -10,10 +10,16 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(GL_ASR_BUILD_TESTS "Build GL_ASR unit tests" ON)
 option(GL_ASR_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
 
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(SNDFILE REQUIRED IMPORTED_TARGET sndfile)
+
 add_library(gl_asr_core
+    src/audio/audio_source.cpp
     src/cli/options.cpp
+    src/preprocess/preprocessor.cpp
 )
 target_include_directories(gl_asr_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(gl_asr_core PUBLIC PkgConfig::SNDFILE)
 
 target_compile_options(gl_asr_core PRIVATE
     $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:-Wall -Wextra -Wpedantic -Wconversion -Wshadow>

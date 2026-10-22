@@ -80,6 +80,41 @@ void testUnexpectedPositional() {
     expect(!ok, "second positional fails");
 }
 
+void testPreprocessFlags() {
+    gl_asr::Options options;
+    std::string error;
+    const bool ok = gl_asr::parseOptions({"audio.wav", "--no-preprocess", "--target-dbfs=-16"},
+                                         options, error);
+    expect(ok, "preprocess flags parse: " + error);
+    expect(options.disablePreprocess, "no-preprocess is set");
+    expect(options.targetDbfs.has_value() && *options.targetDbfs == -16.0,
+           "target-dbfs equals form parses");
+}
+
+void testTargetDbfsValue() {
+    gl_asr::Options options;
+    std::string error;
+    const bool ok = gl_asr::parseOptions({"audio.wav", "--target-dbfs", "-23.5"}, options, error);
+    expect(ok, "target-dbfs value parses: " + error);
+    expect(options.targetDbfs.has_value() && *options.targetDbfs == -23.5,
+           "target-dbfs value is captured");
+}
+
+void testTargetDbfsInvalid() {
+    gl_asr::Options options;
+    std::string error;
+    const bool ok = gl_asr::parseOptions({"audio.wav", "--target-dbfs", "abc"}, options, error);
+    expect(!ok, "invalid target-dbfs fails");
+    expect(error.find("invalid value") != std::string::npos, "invalid target-dbfs message");
+}
+
+void testTargetDbfsMissingValue() {
+    gl_asr::Options options;
+    std::string error;
+    const bool ok = gl_asr::parseOptions({"audio.wav", "--target-dbfs"}, options, error);
+    expect(!ok, "missing target-dbfs value fails");
+}
+
 }  // namespace
 
 int main() {
@@ -91,6 +126,10 @@ int main() {
     testUnknownOption();
     testMissingOutValue();
     testUnexpectedPositional();
+    testPreprocessFlags();
+    testTargetDbfsValue();
+    testTargetDbfsInvalid();
+    testTargetDbfsMissingValue();
 
     if (failures != 0) {
         std::cerr << failures << " test(s) failed\n";

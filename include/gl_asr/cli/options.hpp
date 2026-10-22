@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -11,6 +12,10 @@ struct Options {
     bool verbose = false;
     bool showHelp = false;
     bool showVersion = false;
+
+    // Preprocessing controls.
+    bool disablePreprocess = false;
+    std::optional<double> targetDbfs;  // RMS normalization target when provided
 };
 
 // Parses command-line arguments. Returns true on success; on failure,

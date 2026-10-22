@@ -1,9 +1,12 @@
 #include <filesystem>
+#include <iomanip>
 #include <iostream>
 #include <string>
 #include <vector>
 
+#include "gl_asr/audio/audio_source.hpp"
 #include "gl_asr/cli/options.hpp"
+#include "gl_asr/preprocess/preprocessor.hpp"
 #include "gl_asr/version.hpp"
 
 int main(int argc, char** argv) {
@@ -39,11 +42,46 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    gl_asr::AudioSource source;
+    if (!source.load(options.inputPath, error)) {
+        std::cerr << "error: " << error << "\n";
+        return 1;
+    }
+
+    const gl_asr::AudioClip& clip = source.clip();
+    const int channelCount = clip.channels;
+    std::cout << "Loaded " << options.inputPath << ": " << clip.durationSeconds() << " s, "
+              << clip.sampleRate << " Hz, " << channelCount << " channel"
+              << (channelCount == 1 ? "" : "s") << " -> mono mix (" << clip.frameCount()
+              << " samples)\n";
+
     if (options.verbose) {
-        std::cout << "input:  " << options.inputPath << "\n";
         std::cout << "output: " << options.outputDir << "\n";
     }
 
-    std::cout << "GL_ASR " << GL_ASR_VERSION << ": pipeline not implemented yet.\n";
+    if (!options.disablePreprocess) {
+        gl_asr::PreprocessConfig config;
+        if (options.targetDbfs.has_value()) {
+            config.targetDbfs = *options.targetDbfs;
+        }
+        gl_asr::Preprocessor preprocessor(config);
+        gl_asr::PreprocessStats stats;
+
+        std::vector<float> samples = source.samples();
+        if (!preprocessor.process(samples, clip.sampleRate, &stats, error)) {
+            std::cerr << "error: preprocessing failed: " << error << "\n";
+            return 1;
+        }
+
+        std::cout << std::fixed << std::setprecision(1)
+                  << "Preprocessed: RMS " << stats.inputRmsDbfs << " -> "
+                  << stats.outputRmsDbfs << " dBFS (gain " << (stats.gainDb >= 0 ? "+" : "")
+                  << stats.gainDb << " dB)" << std::setprecision(2)
+                  << ", peak " << stats.outputPeak << "\n";
+    } else {
+        std::cout << "Preprocessing disabled.\n";
+    }
+
+    std::cout << "GL_ASR " << GL_ASR_VERSION << ": pipeline stops after preprocessing.\n";
     return 0;
 }
