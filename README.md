@@ -1,7 +1,5 @@
 This is a GL_ASR(Automatic Speech Recognition) project.
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the module layout.
-
 ## Build & Run
 
 ```sh

@@ -21,3 +21,4 @@ output/
 
 # Local-only planning document (do not commit/publish)
 PROJECT_PLAN.md
+docs/ARCHITECTURE.md
