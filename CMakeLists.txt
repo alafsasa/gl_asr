@@ -19,6 +19,7 @@ add_library(gl_asr_core
     src/cli/options.cpp
     src/features/feature_extractor.cpp
     src/phoneme/phoneme_mapper.cpp
+    src/pipeline/pipeline.cpp
     src/preprocess/preprocessor.cpp
 )
 target_include_directories(gl_asr_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

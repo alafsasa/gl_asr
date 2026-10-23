@@ -22,3 +22,8 @@ add_executable(gl_asr_phoneme_tests test_phoneme_mapper.cpp)
 target_link_libraries(gl_asr_phoneme_tests PRIVATE gl_asr_core)
 
 add_test(NAME phoneme_mapper COMMAND gl_asr_phoneme_tests)
+
+add_executable(gl_asr_pipeline_tests test_pipeline.cpp)
+target_link_libraries(gl_asr_pipeline_tests PRIVATE gl_asr_core)
+
+add_test(NAME pipeline_integration COMMAND gl_asr_pipeline_tests)

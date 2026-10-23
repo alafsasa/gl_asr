@@ -1,14 +1,10 @@
-#include <filesystem>
 #include <iomanip>
 #include <iostream>
 #include <string>
 #include <vector>
 
-#include "gl_asr/audio/audio_source.hpp"
 #include "gl_asr/cli/options.hpp"
-#include "gl_asr/features/feature_extractor.hpp"
-#include "gl_asr/phoneme/phoneme_mapper.hpp"
-#include "gl_asr/preprocess/preprocessor.hpp"
+#include "gl_asr/pipeline/pipeline.hpp"
 #include "gl_asr/version.hpp"
 
 int main(int argc, char** argv) {
@@ -31,109 +27,59 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    std::error_code ec;
-    if (!std::filesystem::is_regular_file(options.inputPath, ec)) {
-        std::cerr << "error: cannot read input file: " << options.inputPath << "\n";
-        return 1;
+    gl_asr::PipelineConfig config;
+    config.outputDir = options.outputDir;
+    config.enablePreprocess = !options.disablePreprocess;
+    config.enableFeatures = !options.disableFeatures;
+    config.enablePhonemes = !options.disablePhonemes;
+    if (options.targetDbfs.has_value()) {
+        config.preprocess.targetDbfs = *options.targetDbfs;
+    }
+    if (options.nMels.has_value()) {
+        config.mel.nMels = *options.nMels;
     }
 
-    std::filesystem::create_directories(options.outputDir, ec);
-    if (ec) {
-        std::cerr << "error: cannot create output directory " << options.outputDir << ": "
-                  << ec.message() << "\n";
-        return 1;
-    }
-
-    gl_asr::AudioSource source;
-    if (!source.load(options.inputPath, error)) {
+    const gl_asr::Pipeline pipeline(config);
+    gl_asr::PipelineResult result;
+    if (!pipeline.run(options.inputPath, result, error)) {
         std::cerr << "error: " << error << "\n";
         return 1;
     }
 
-    const gl_asr::AudioClip& clip = source.clip();
-    const int channelCount = clip.channels;
+    const gl_asr::AudioClip& clip = result.clip;
     std::cout << "Loaded " << options.inputPath << ": " << clip.durationSeconds() << " s, "
-              << clip.sampleRate << " Hz, " << channelCount << " channel"
-              << (channelCount == 1 ? "" : "s") << " -> mono mix (" << clip.frameCount()
+              << clip.sampleRate << " Hz, " << clip.channels << " channel"
+              << (clip.channels == 1 ? "" : "s") << " -> mono mix (" << clip.frameCount()
               << " samples)\n";
 
     if (options.verbose) {
         std::cout << "output: " << options.outputDir << "\n";
     }
 
-    std::vector<float> samples = source.samples();
-
-    if (!options.disablePreprocess) {
-        gl_asr::PreprocessConfig config;
-        if (options.targetDbfs.has_value()) {
-            config.targetDbfs = *options.targetDbfs;
-        }
-        gl_asr::Preprocessor preprocessor(config);
-        gl_asr::PreprocessStats stats;
-
-        if (!preprocessor.process(samples, clip.sampleRate, &stats, error)) {
-            std::cerr << "error: preprocessing failed: " << error << "\n";
-            return 1;
-        }
-
-        std::cout << std::fixed << std::setprecision(1)
-                  << "Preprocessed: RMS " << stats.inputRmsDbfs << " -> "
-                  << stats.outputRmsDbfs << " dBFS (gain " << (stats.gainDb >= 0 ? "+" : "")
-                  << stats.gainDb << " dB)" << std::setprecision(2)
-                  << ", peak " << stats.outputPeak << "\n";
+    if (result.preprocessed) {
+        const gl_asr::PreprocessStats& stats = result.preprocessStats;
+        std::cout << std::fixed << std::setprecision(1) << "Preprocessed: RMS " << stats.inputRmsDbfs
+                  << " -> " << stats.outputRmsDbfs << " dBFS (gain "
+                  << (stats.gainDb >= 0 ? "+" : "") << stats.gainDb << " dB)"
+                  << std::setprecision(2) << ", peak " << stats.outputPeak << "\n";
     } else {
         std::cout << "Preprocessing disabled.\n";
     }
 
-    if (!options.disableFeatures) {
-        gl_asr::MelConfig melConfig;
-        if (options.nMels.has_value()) {
-            melConfig.nMels = *options.nMels;
-        }
-        const gl_asr::FeatureExtractor extractor(melConfig);
-        gl_asr::FeatureMatrix features;
-
-        if (!extractor.extract(samples, clip.sampleRate, features, error)) {
-            std::cerr << "error: feature extraction failed: " << error << "\n";
-            return 1;
-        }
-
-        std::cout << "Features: " << features.rows << " frames x " << features.cols
+    if (result.featuresExtracted) {
+        std::cout << "Features: " << result.features.rows << " frames x " << result.features.cols
                   << " mel bins\n";
-
-        const std::filesystem::path spectrogramPath =
-            std::filesystem::path(options.outputDir) / "spectrogram.csv";
-        if (!gl_asr::FeatureExtractor::dumpCsv(features, spectrogramPath.string(), error)) {
-            std::cerr << "error: " << error << "\n";
-            return 1;
-        }
-        std::cout << "Wrote " << spectrogramPath.string() << "\n";
+        std::cout << "Wrote " << result.spectrogramPath << "\n";
 
         if (options.verbose) {
-            const gl_asr::DerivedParams params = extractor.derivedParams(clip.sampleRate);
+            const gl_asr::DerivedParams& params = result.featureParams;
             std::cout << "window: " << params.windowSamples << " samples, hop: "
                       << params.hopSamples << " samples, fft: " << params.fftSize << "\n";
         }
 
-        if (!options.disablePhonemes) {
-            const gl_asr::PhonemeMapper mapper;
-            std::vector<gl_asr::PhonemeSegment> segments;
-            const double frameShiftSec = melConfig.frameShiftMs / 1000.0;
-
-            if (!mapper.map(features, melConfig, clip.sampleRate, frameShiftSec, segments,
-                            error)) {
-                std::cerr << "error: phoneme mapping failed: " << error << "\n";
-                return 1;
-            }
-
-            const std::filesystem::path phonemesPath =
-                std::filesystem::path(options.outputDir) / "phonemes.txt";
-            if (!gl_asr::PhonemeMapper::exportPhonemes(segments, phonemesPath.string(), error)) {
-                std::cerr << "error: " << error << "\n";
-                return 1;
-            }
-            std::cout << "Phonemes: " << segments.size() << " segments -> "
-                      << phonemesPath.string() << "\n";
+        if (result.phonemesMapped) {
+            std::cout << "Phonemes: " << result.segments.size() << " segments -> "
+                      << result.phonemesPath << "\n";
         } else {
             std::cout << "Phoneme mapping disabled.\n";
         }
