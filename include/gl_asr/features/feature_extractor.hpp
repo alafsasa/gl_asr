@@ -47,6 +47,11 @@ public:
 
     [[nodiscard]] DerivedParams derivedParams(int sampleRate) const;
 
+    // Center frequency in Hz of each mel bin (size nMels). Uses Nyquist when
+    // config.fmaxHz is 0, so the result depends on the sample rate.
+    [[nodiscard]] static std::vector<double> melBinCentersHz(const MelConfig& config,
+                                                             int sampleRate);
+
     // Writes the spectrogram as CSV: one row per frame, comma-separated mel values.
     static bool dumpCsv(const FeatureMatrix& features, const std::string& path,
                         std::string& error);

@@ -7,6 +7,7 @@
 #include "gl_asr/audio/audio_source.hpp"
 #include "gl_asr/cli/options.hpp"
 #include "gl_asr/features/feature_extractor.hpp"
+#include "gl_asr/phoneme/phoneme_mapper.hpp"
 #include "gl_asr/preprocess/preprocessor.hpp"
 #include "gl_asr/version.hpp"
 
@@ -113,10 +114,33 @@ int main(int argc, char** argv) {
             std::cout << "window: " << params.windowSamples << " samples, hop: "
                       << params.hopSamples << " samples, fft: " << params.fftSize << "\n";
         }
+
+        if (!options.disablePhonemes) {
+            const gl_asr::PhonemeMapper mapper;
+            std::vector<gl_asr::PhonemeSegment> segments;
+            const double frameShiftSec = melConfig.frameShiftMs / 1000.0;
+
+            if (!mapper.map(features, melConfig, clip.sampleRate, frameShiftSec, segments,
+                            error)) {
+                std::cerr << "error: phoneme mapping failed: " << error << "\n";
+                return 1;
+            }
+
+            const std::filesystem::path phonemesPath =
+                std::filesystem::path(options.outputDir) / "phonemes.txt";
+            if (!gl_asr::PhonemeMapper::exportPhonemes(segments, phonemesPath.string(), error)) {
+                std::cerr << "error: " << error << "\n";
+                return 1;
+            }
+            std::cout << "Phonemes: " << segments.size() << " segments -> "
+                      << phonemesPath.string() << "\n";
+        } else {
+            std::cout << "Phoneme mapping disabled.\n";
+        }
     } else {
         std::cout << "Feature extraction disabled.\n";
     }
 
-    std::cout << "GL_ASR " << GL_ASR_VERSION << ": pipeline stops after feature extraction.\n";
+    std::cout << "GL_ASR " << GL_ASR_VERSION << ": pipeline stops after phoneme mapping.\n";
     return 0;
 }

@@ -30,10 +30,9 @@ double melToHz(double mel) {
     return 700.0 * (std::pow(10.0, mel / 2595.0) - 1.0);
 }
 
-// Builds a triangular mel filter bank of shape [nMels x spectrumBins].
-// Filter centers are equally spaced on the mel scale between fmin and fmax.
-std::vector<std::vector<float>> buildMelFilterBank(const MelConfig& config, int sampleRate,
-                                                   int fftSize, int spectrumBins) {
+// Builds the nMels+2 mel-scale triangle corner points in Hz used by the
+// filter bank: points[i] is the i-th corner, equally spaced in mel.
+std::vector<double> melCenterPointsHz(const MelConfig& config, int sampleRate) {
     const double fmaxHz =
         config.fmaxHz > 0.0 ? config.fmaxHz : static_cast<double>(sampleRate) / 2.0;
     const double melLow = hzToMel(config.fminHz);
@@ -46,6 +45,14 @@ std::vector<std::vector<float>> buildMelFilterBank(const MelConfig& config, int 
                          static_cast<double>(config.nMels + 1);
         centersHz[static_cast<std::size_t>(point)] = melToHz(mel);
     }
+    return centersHz;
+}
+
+// Builds a triangular mel filter bank of shape [nMels x spectrumBins].
+// Filter centers are equally spaced on the mel scale between fmin and fmax.
+std::vector<std::vector<float>> buildMelFilterBank(const MelConfig& config, int sampleRate,
+                                                   int fftSize, int spectrumBins) {
+    const std::vector<double> centersHz = melCenterPointsHz(config, sampleRate);
 
     std::vector<std::vector<float>> bank(static_cast<std::size_t>(config.nMels),
                                          std::vector<float>(static_cast<std::size_t>(spectrumBins),
@@ -74,6 +81,12 @@ std::vector<std::vector<float>> buildMelFilterBank(const MelConfig& config, int 
 }  // namespace
 
 FeatureExtractor::FeatureExtractor(MelConfig config) : config_(config) {}
+
+std::vector<double> FeatureExtractor::melBinCentersHz(const MelConfig& config, int sampleRate) {
+    const std::vector<double> points = melCenterPointsHz(config, sampleRate);
+    // Bin m is covered by filter m, whose center is corner point m + 1.
+    return std::vector<double>(points.begin() + 1, points.end() - 1);
+}
 
 bool FeatureExtractor::validate(int sampleRate, std::string& error) const {
     if (sampleRate <= 0) {

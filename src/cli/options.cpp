@@ -66,6 +66,10 @@ bool parseOptions(const std::vector<std::string>& args, Options& options, std::s
             options.disableFeatures = true;
             continue;
         }
+        if (arg == "--no-phonemes") {
+            options.disablePhonemes = true;
+            continue;
+        }
         if (arg == "--n-mels") {
             if (i + 1 >= args.size()) {
                 error = "missing value for " + arg;
@@ -154,6 +158,7 @@ std::string usageText() {
            "      --target-dbfs <db> RMS normalization target in dBFS (default: -20)\n"
            "      --no-features      Skip log-mel spectrogram extraction\n"
            "      --n-mels <n>       Number of mel filter bins (default: 80)\n"
+           "      --no-phonemes      Skip heuristic phoneme segmentation\n"
            "  -v, --verbose          Enable verbose logging\n"
            "  -h, --help             Show this help message\n"
            "  -V, --version          Show version information\n";

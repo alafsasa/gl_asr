@@ -18,6 +18,7 @@ add_library(gl_asr_core
     src/audio/audio_source.cpp
     src/cli/options.cpp
     src/features/feature_extractor.cpp
+    src/phoneme/phoneme_mapper.cpp
     src/preprocess/preprocessor.cpp
 )
 target_include_directories(gl_asr_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

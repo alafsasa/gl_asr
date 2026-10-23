@@ -20,6 +20,9 @@ struct Options {
     // Feature extraction controls.
     bool disableFeatures = false;
     std::optional<int> nMels;  // number of mel filter bins when provided
+
+    // Phoneme mapping controls.
+    bool disablePhonemes = false;
 };
 
 // Parses command-line arguments. Returns true on success; on failure,
